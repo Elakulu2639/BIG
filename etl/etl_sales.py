@@ -23,6 +23,7 @@ def extract_data(csv_path: str, chunk_size: int) -> Iterable[pd.DataFrame]:
     )
     
 <<<<<<< HEAD
+
     return chunks 
 =======
     return chunks
