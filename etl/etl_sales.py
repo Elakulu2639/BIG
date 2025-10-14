@@ -119,3 +119,22 @@ def transform_data(df: pd.DataFrame) -> pd.DataFrame:
 
     logger.info("transform_complete", output_rows=len(df))
     return df
+def load_data(engine: Engine, df: pd.DataFrame) -> int:
+    """LOAD: Insert transformed data into database"""
+    if df.empty:
+        return 0
+    
+    logger.info("load_start", rows_to_load=len(df))
+    
+    df.to_sql(
+        name="records",
+        con=engine,
+        schema="sales",
+        if_exists="append",
+        index=False,
+        method="multi",
+        chunksize=10000,
+    )
+    
+    logger.info("load_complete", rows_loaded=len(df))
+    return len(df)
