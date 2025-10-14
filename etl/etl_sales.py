@@ -92,3 +92,30 @@ def transform_data(df: pd.DataFrame) -> pd.DataFrame:
             max_existing_id = df["order_id"].max() if not df["order_id"].isna().all() else 0
             start_id = min(max_existing_id - 1, -1)
             df.loc[missing_order_ids, "order_id"] = range(start_id, start_id - missing_order_ids.sum(), -1)
+
+
+# 4. Remove duplicates based on order_id (primary business key)
+    initial_rows = len(df)
+    df = df.drop_duplicates(subset=["order_id"], keep="first")
+    duplicates_removed = initial_rows - len(df)
+    
+    if duplicates_removed > 0:
+        logger.info("duplicates_removed", count=duplicates_removed)
+
+    # 5. Data validation and cleaning
+    # Remove rows where critical fields are still invalid
+    df = df.dropna(subset=["order_id"])  # Must have order_id
+    
+    # Ensure units_sold is positive
+    if "units_sold" in df.columns:
+        df = df[df["units_sold"] >= 0]
+    
+    # Ensure ship_date is not before order_date
+    if "order_date" in df.columns and "ship_date" in df.columns:
+        invalid_dates = df["ship_date"] < df["order_date"]
+        if invalid_dates.any():
+            logger.info("invalid_dates_fixed", count=invalid_dates.sum())
+            df.loc[invalid_dates, "ship_date"] = df.loc[invalid_dates, "order_date"]
+
+    logger.info("transform_complete", output_rows=len(df))
+    return df
