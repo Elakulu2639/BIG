@@ -138,3 +138,78 @@ def load_data(engine: Engine, df: pd.DataFrame) -> int:
     
     logger.info("load_complete", rows_loaded=len(df))
     return len(df)
+
+def ensure_schema(engine: Engine) -> None:
+    with engine.begin() as conn:
+        conn.execute(text("CREATE SCHEMA IF NOT EXISTS sales"))
+        conn.execute(text(
+            """
+            CREATE TABLE IF NOT EXISTS sales.records (
+                id BIGSERIAL PRIMARY KEY,
+                region TEXT,
+                country TEXT,
+                item_type TEXT,
+                sales_channel TEXT,
+                order_priority TEXT,
+                order_date DATE,
+                order_id BIGINT,
+                ship_date DATE,
+                units_sold INTEGER,
+                unit_price NUMERIC(12,2),
+                unit_cost NUMERIC(12,2),
+                total_revenue NUMERIC(14,2),
+                total_cost NUMERIC(14,2),
+                total_profit NUMERIC(14,2),
+                inserted_at TIMESTAMPTZ DEFAULT NOW()
+            )
+            """
+        ))
+
+
+def run_etl(csv_path: str | None = None, chunk_size: int | None = None) -> None:
+    """Main ETL pipeline following proper E-T-L order"""
+    settings = EtlSettings()
+    path = csv_path or settings.csv_path
+    size = chunk_size or settings.chunk_size
+
+    # Setup database
+    engine = create_db_engine()
+    ensure_schema(engine)
+
+    logger.info("etl_pipeline_start", csv_path=path, chunk_size=size)
+
+    # Determine total rows for progress tracking
+    try:
+        total_rows = sum(1 for _ in open(path, "r", encoding="utf-8")) - 1
+    except Exception:
+        total_rows = None
+
+    # EXTRACT: Read CSV in chunks
+    chunks = extract_data(path, size)
+
+    processed = 0
+    for i, chunk in enumerate(chunks, start=1):
+        # TRANSFORM: Clean and validate data
+        transformed_chunk = transform_data(chunk)
+        
+        # LOAD: Insert into database
+        inserted = load_data(engine, transformed_chunk)
+        
+        processed += inserted
+        pct = (processed / total_rows * 100) if total_rows else None
+        
+        logger.info(
+            "etl_chunk_complete",
+            chunk_number=i,
+            extracted_rows=len(chunk),
+            transformed_rows=len(transformed_chunk),
+            loaded_rows=inserted,
+            total_processed=processed,
+            progress_percent=(round(pct, 2) if pct else None),
+        )
+
+    logger.info("etl_pipeline_complete", total_rows_loaded=processed)
+
+
+if name == "main":
+    run_etl()
