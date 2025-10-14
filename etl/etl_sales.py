@@ -22,4 +22,4 @@ def extract_data(csv_path: str, chunk_size: int) -> Iterable[pd.DataFrame]:
         dtype_backend="pyarrow",
     )
     
-    return chunks
+    return chunks 
