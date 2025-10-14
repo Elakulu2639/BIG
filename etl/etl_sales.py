@@ -22,10 +22,6 @@ def extract_data(csv_path: str, chunk_size: int) -> Iterable[pd.DataFrame]:
         dtype_backend="pyarrow",
     )
     
-<<<<<<< HEAD
-
-    return chunks 
-=======
     return chunks
 
 def transform_data(df: pd.DataFrame) -> pd.DataFrame:
@@ -69,4 +65,30 @@ def transform_data(df: pd.DataFrame) -> pd.DataFrame:
     for col in numeric_cols:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
->>>>>>> 10514d403fdc3cb505acd2391fbb1422efaec9ce
+
+    
+    # 3. Handle missing values
+    # Fill missing categorical data with 'Unknown'
+    categorical_cols = ["region", "country", "item_type", "sales_channel", "order_priority"]
+    for col in categorical_cols:
+        if col in df.columns:
+            df[col] = df[col].fillna("Unknown")
+    
+    # Fill missing numeric data with 0
+    for col in numeric_cols:
+        if col in df.columns:
+            df[col] = df[col].fillna(0)
+    
+    # Fill missing dates with a default date (1900-01-01)
+    for col in date_cols:
+        if col in df.columns:
+            df[col] = df[col].fillna(pd.Timestamp("1900-01-01").date())
+    
+    # Fill missing order_id with a generated ID (negative to avoid conflicts)
+    if "order_id" in df.columns:
+        missing_order_ids = df["order_id"].isna()
+        if missing_order_ids.any():
+            # Generate negative IDs for missing values
+            max_existing_id = df["order_id"].max() if not df["order_id"].isna().all() else 0
+            start_id = min(max_existing_id - 1, -1)
+            df.loc[missing_order_ids, "order_id"] = range(start_id, start_id - missing_order_ids.sum(), -1)
