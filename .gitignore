@@ -1,0 +1,16 @@
+.env
+.env*
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+.cache/
+.ipynb_checkpoints/
+# Data outputs
+outputs/
+# VSCode/Cursor
+.vscode/
+.cursor/
+.DS_Store
